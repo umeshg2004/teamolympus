@@ -7,6 +7,7 @@ class ServiceRequest(Base):
     __tablename__ = "service_requests"
 
     id = Column(Integer, primary_key=True, index=True)
+    
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     message = Column(String, nullable=False)
     status = Column(String, default="open", nullable=False)
