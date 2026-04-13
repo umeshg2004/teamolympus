@@ -1,8 +1,6 @@
 ﻿from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
-
 from jose import JWTError, jwt
-
 from ..config import ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
 
 
