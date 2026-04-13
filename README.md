@@ -1,1 +1,1 @@
-# teamolympus
+# TeamOlympus
