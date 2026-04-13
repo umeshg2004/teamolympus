@@ -7,7 +7,7 @@ API_BASE_URL = "http://localhost:8000"
 st.set_page_config(page_title="Banking App", layout="wide")
 
 def api_post(path: str, json: dict, token: Optional[str] = None):
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    headers = {" Authorization": f"Bearer {token}"} if token else {}
     return requests.post(f" {API_BASE_URL}{path}", json=json, headers=headers, timeout=10)
 
 
