@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
+from ..config import ADMIN_SECRET_CODE
 from ..models.user import User
 from ..models.customer import Customer
 from ..models.staff import Staff
@@ -27,7 +28,7 @@ def authenticate_user(db: Session, email: str, password: str, role: str) -> Opti
         customer = db.query(Customer).filter(Customer.email == email).first()
         if customer:
             user = db.query(User).filter(User.id == customer.user_id, User.role == "customer").first()
-    elif role in {"admin", "staff"}:
+    elif role == "staff":
         staff = db.query(Staff).filter(Staff.email == email).first()
         if staff:
             user = db.query(User).filter(User.id == staff.user_id, User.role == role).first()
@@ -37,6 +38,15 @@ def authenticate_user(db: Session, email: str, password: str, role: str) -> Opti
     if not verify_password(password, user.password_hash):
         return None
     return user
+
+
+def authenticate_admin(db: Session, email: str, secret_code: str) -> Optional[User]:
+    if secret_code != ADMIN_SECRET_CODE:
+        return None
+    staff = db.query(Staff).filter(Staff.email == email).first()
+    if not staff:
+        return None
+    return db.query(User).filter(User.id == staff.user_id, User.role == "admin").first()
 
 
 def get_current_user(

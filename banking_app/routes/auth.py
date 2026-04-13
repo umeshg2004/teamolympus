@@ -1,5 +1,6 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import secrets
 
 from ..config import ADMIN_SECRET_CODE
 from ..database import get_db
@@ -8,7 +9,7 @@ from ..models.customer import Customer
 from ..models.account import Account
 from ..models.staff import Staff
 from ..schemas.customer_schema import RegisterRequest, LoginRequest, TokenResponse
-from ..services.auth_service import authenticate_user, build_token, create_user
+from ..services.auth_service import authenticate_user, authenticate_admin, build_token, create_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,6 +22,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if payload.role == "admin":
         if not payload.secret_code or payload.secret_code != ADMIN_SECRET_CODE:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin secret code")
+        if not payload.username:
+            payload.username = payload.email
+        payload.password = secrets.token_urlsafe(12)
+    else:
+        if not payload.password:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password is required")
+        if not payload.username:
+            payload.username = payload.email
 
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
@@ -56,7 +65,16 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if payload.role not in {"customer", "admin", "staff"}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
-    user = authenticate_user(db, payload.email, payload.password, payload.role)
+
+    if payload.role == "admin":
+        if not payload.secret_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Secret code is required")
+        user = authenticate_admin(db, payload.email, payload.secret_code)
+    else:
+        if not payload.password:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password is required")
+        user = authenticate_user(db, payload.email, payload.password, payload.role)
+
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = build_token(user)

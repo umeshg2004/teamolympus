@@ -4,8 +4,8 @@ from datetime import datetime
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str
+    username: Optional[str] = None
+    password: Optional[str] = None
     role: str  # customer, staff, admin
     full_name: str
     email: EmailStr
@@ -15,8 +15,9 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: Optional[str] = None
     role: str  # customer, admin, staff
+    secret_code: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -47,6 +48,11 @@ class ServiceRequestOut(BaseModel):
     customer_id: int
     customer_name: str
     customer_email: EmailStr
+    customer_phone: Optional[str] = None
 
     class Config:
         orm_mode = True
+
+
+class ServiceRequestUpdate(BaseModel):
+    status: str  # open or solved

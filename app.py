@@ -17,6 +17,11 @@ def api_get(path: str, params: Optional[dict] = None, token: Optional[str] = Non
     return requests.get(f"{API_BASE_URL}{path}", params=params, headers=headers, timeout=10)
 
 
+def api_patch(path: str, json: dict, token: Optional[str] = None):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    return requests.patch(f"{API_BASE_URL}{path}", json=json, headers=headers, timeout=10)
+
+
 def ensure_state(key: str, default):
     if key not in st.session_state:
         st.session_state[key] = default
@@ -37,6 +42,16 @@ def safe_rerun() -> None:
         st.experimental_rerun()
 
 
+def parse_int(value: str) -> Optional[int]:
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
 ensure_state("customer_token", None)
 ensure_state("admin_token", None)
 ensure_state("staff_token", None)
@@ -45,15 +60,12 @@ st.title("Banking App")
 
 col_left, col_right = st.columns([2, 1])
 with col_left:
-    st.write("FastAPI backend + SQLite + JWT + Streamlit frontend")
-with col_right:
-    st.write("API base:")
-    st.code(API_BASE_URL)
+    pass
 
 st.divider()
 
 st.sidebar.title("Portal")
-portal = st.sidebar.radio("Role", ["Customer", "Admin"], index=0)
+portal = st.sidebar.radio("Role", ["Customer", "Admin", "Staff"], index=0)
 
 if portal == "Customer":
     token = st.session_state.customer_token
@@ -64,7 +76,7 @@ if portal == "Customer":
             safe_rerun()
         menu = st.sidebar.radio(
             "Actions",
-            ["Add Money", "Withdraw Money", "Transfer Money", "Close Account"],
+            ["Add Money", "Withdraw Money", "Transfer Money", "Close Account", "Raise Query"],
         )
     else:
         menu = st.sidebar.radio("Access", ["Register", "Login"])
@@ -115,46 +127,98 @@ if portal == "Customer":
             else:
                 st.error(resp.text)
 
+    rows = []
     if token:
-        if st.button("List My Accounts"):
-            resp = api_get("/customer/accounts", token=token)
-            st.write(resp.json() if resp.ok else resp.text)
+        st.subheader("My Accounts")
+        accounts_resp = api_get("/customer/accounts", token=token)
+        if accounts_resp.ok:
+            rows = accounts_resp.json()
+            if rows:
+                st.dataframe(rows, use_container_width=True)
+            else:
+                st.info("No accounts found.")
+        else:
+            st.error(accounts_resp.text)
 
     if token and menu == "Add Money":
         st.subheader("Add Money")
-        dep_acc = st.number_input("Account ID", min_value=1, step=1, key="dep_acc")
         dep_amt = st.number_input("Amount", min_value=0.0, step=10.0, key="dep_amt")
         if st.button("Deposit"):
-            resp = api_post("/customer/deposit", {"account_id": int(dep_acc), "amount": dep_amt}, token)
-            st.write(resp.json() if resp.ok else resp.text)
+            if not rows:
+                st.error("No account found for your profile.")
+            else:
+                account_id = rows[0].get("id")
+                resp = api_post("/customer/deposit", {"account_id": account_id, "amount": dep_amt}, token)
+                if resp.ok:
+                    payload = resp.json()
+                    st.success(f"Amount added. New balance: {payload.get('balance')}")
+                    safe_rerun()
+                else:
+                    st.error(resp.text)
 
     if token and menu == "Withdraw Money":
         st.subheader("Withdraw Money")
-        w_acc = st.number_input("Account ID", min_value=1, step=1, key="w_acc")
         w_amt = st.number_input("Amount", min_value=0.0, step=10.0, key="w_amt")
         if st.button("Withdraw"):
-            resp = api_post("/customer/withdraw", {"account_id": int(w_acc), "amount": w_amt}, token)
-            st.write(resp.json() if resp.ok else resp.text)
+            if not rows:
+                st.error("No account found for your profile.")
+            else:
+                account_id = rows[0].get("id")
+                resp = api_post("/customer/withdraw", {"account_id": account_id, "amount": w_amt}, token)
+                if resp.ok:
+                    payload = resp.json()
+                    st.success(f"Withdrawal successful. New balance: {payload.get('balance')}")
+                    safe_rerun()
+                else:
+                    st.error(resp.text)
 
     if token and menu == "Transfer Money":
         st.subheader("Transfer Money")
-        from_acc = st.number_input("From account ID", min_value=1, step=1, key="from_acc")
-        to_acc = st.number_input("To account ID", min_value=1, step=1, key="to_acc")
+        to_acc = st.text_input("To account ID", key="to_acc")
         t_amt = st.number_input("Amount", min_value=0.0, step=10.0, key="t_amt")
         if st.button("Transfer"):
-            resp = api_post(
-                "/customer/transfer",
-                {"from_account_id": int(from_acc), "to_account_id": int(to_acc), "amount": t_amt},
-                token,
-            )
-            st.write(resp.json() if resp.ok else resp.text)
+            if not rows:
+                st.error("No account found for your profile.")
+            else:
+                from_acc = rows[0].get("id")
+                to_id = parse_int(to_acc)
+                if not to_id:
+                    st.error("Enter a valid target account ID.")
+                else:
+                    resp = api_post(
+                        "/customer/transfer",
+                        {"from_account_id": int(from_acc), "to_account_id": to_id, "amount": t_amt},
+                        token,
+                    )
+                    if resp.ok:
+                        st.success("Transfer completed.")
+                        safe_rerun()
+                    else:
+                        st.error(resp.text)
 
     if token and menu == "Close Account":
         st.subheader("Close Account")
-        close_id = st.number_input("Account ID", min_value=1, step=1, key="close_id")
         if st.button("Close"):
-            resp = api_post("/customer/close", {"account_id": int(close_id)}, token)
-            st.write(resp.json() if resp.ok else resp.text)
+            if not rows:
+                st.error("No account found for your profile.")
+            else:
+                account_id = rows[0].get("id")
+                resp = api_post("/customer/close", {"account_id": account_id}, token)
+                if resp.ok:
+                    st.success("Account closed.")
+                    safe_rerun()
+                else:
+                    st.error(resp.text)
+
+    if token and menu == "Raise Query":
+        st.subheader("Raise Query")
+        message = st.text_area("Describe your issue")
+        if st.button("Submit Query"):
+            resp = api_post("/customer/request", {"message": message}, token)
+            if resp.ok:
+                st.success("Query submitted.")
+            else:
+                st.error(resp.text)
 
 if portal == "Admin":
     token = st.session_state.admin_token
@@ -199,27 +263,22 @@ if portal == "Admin":
 
         if admin_menu == "Register":
             st.subheader("Admin Register")
-            a_username = st.text_input("Username", key="a_reg_username")
-            a_password = st.text_input("Password", type="password", key="a_reg_password")
             a_name = st.text_input("Full name", key="a_reg_name")
             a_email = st.text_input("Email", key="a_reg_email")
             a_secret = st.text_input("Secret Code", type="password", key="a_reg_secret")
             if st.button("Register Admin"):
-                a_username = normalize_text(a_username)
                 a_name = normalize_text(a_name)
                 a_email = normalize_text(a_email)
                 if not a_email or not validate_email(a_email):
                     st.error("Enter a valid email address.")
-                elif not a_username or not a_password or not a_name:
-                    st.error("Username, password, and full name are required.")
+                elif not a_name:
+                    st.error("Full name is required.")
                 elif not a_secret:
                     st.error("Secret code is required for admin registration.")
                 else:
                     resp = api_post(
                         "/auth/register",
                         {
-                            "username": a_username,
-                            "password": a_password,
                             "role": "admin",
                             "full_name": a_name,
                             "email": a_email,
@@ -235,11 +294,85 @@ if portal == "Admin":
         if admin_menu == "Login":
             st.subheader("Admin Login")
             a_luser = st.text_input("Email", key="a_login_username")
-            a_lpass = st.text_input("Password", type="password", key="a_login_password")
+            a_secret = st.text_input("Secret Code", type="password", key="a_login_secret")
             if st.button("Login Admin"):
-                resp = api_post("/auth/login", {"email": a_luser, "password": a_lpass, "role": "admin"})
+                resp = api_post("/auth/login", {"email": a_luser, "secret_code": a_secret, "role": "admin"})
                 if resp.ok:
                     st.session_state.admin_token = resp.json().get("access_token")
+                    st.success("Logged in")
+                    safe_rerun()
+                else:
+                    st.error(resp.text)
+
+if portal == "Staff":
+    token = st.session_state.staff_token
+    if token:
+        st.sidebar.success("Staff logged in")
+        if st.sidebar.button("Logout"):
+            st.session_state.staff_token = None
+            safe_rerun()
+
+        st.subheader("Service Requests")
+        resp = api_get("/staff/requests", token=token)
+        if resp.ok:
+            rows = resp.json()
+            if rows:
+                st.dataframe(rows, use_container_width=True)
+                st.subheader("Mark Request As Solved")
+                req_id = st.number_input("Request ID", min_value=1, step=1, key="staff_req_id")
+                if st.button("Mark Solved"):
+                    upd = api_patch(f"/staff/requests/{int(req_id)}", {"status": "solved"}, token)
+                    if upd.ok:
+                        payload = upd.json()
+                        st.success(f"Request {payload.get('request_id')} marked as {payload.get('new_status')}.")
+                        safe_rerun()
+                    else:
+                        st.error(upd.text)
+            else:
+                st.info("No requests available.")
+        else:
+            st.error(resp.text)
+    else:
+        st.sidebar.subheader("Staff Access")
+        staff_menu = st.sidebar.radio("Access", ["Register", "Login"], index=0)
+
+        if staff_menu == "Register":
+            st.subheader("Staff Register")
+            s_name = st.text_input("Full name", key="s_reg_name")
+            s_email = st.text_input("Email", key="s_reg_email")
+            s_password = st.text_input("Password", type="password", key="s_reg_password")
+            if st.button("Register Staff"):
+                s_name = normalize_text(s_name)
+                s_email = normalize_text(s_email)
+                if not s_email or not validate_email(s_email):
+                    st.error("Enter a valid email address.")
+                elif not s_name or not s_password:
+                    st.error("Full name and password are required.")
+                else:
+                    resp = api_post(
+                        "/auth/register",
+                        {
+                            "username": s_email,
+                            "password": s_password,
+                            "role": "staff",
+                            "full_name": s_name,
+                            "email": s_email,
+                            "phone": None,
+                        },
+                    )
+                    if resp.ok:
+                        st.success("Registered")
+                    else:
+                        st.error(resp.text)
+
+        if staff_menu == "Login":
+            st.subheader("Staff Login")
+            s_email = st.text_input("Email", key="s_login_email")
+            s_password = st.text_input("Password", type="password", key="s_login_password")
+            if st.button("Login Staff"):
+                resp = api_post("/auth/login", {"email": s_email, "password": s_password, "role": "staff"})
+                if resp.ok:
+                    st.session_state.staff_token = resp.json().get("access_token")
                     st.success("Logged in")
                     safe_rerun()
                 else:
