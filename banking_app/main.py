@@ -55,4 +55,4 @@ app.include_router(staff.router)
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "OK"}
