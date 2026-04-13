@@ -65,7 +65,7 @@ with col_left:
 st.divider()
 
 st.sidebar.title("Portal")
-portal = st.sidebar.radio("Role", ["Customer", "Admin", "Staff"], index=0)
+portal = st.sidebar.radio("Role", ["Customer", "admin", "Staff"], index=0)
 
 if portal == "Customer":
     token = st.session_state.customer_token
