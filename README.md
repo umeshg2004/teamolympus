@@ -103,7 +103,7 @@ A comprehensive online banking application built with FastAPI backend, SQLite da
    - Close accounts
 
 ### Admin Workflow
-1. **Register**: Register as admin using the secret code `BRANCH-ADMIN-2026`
+1. **Register**: Register as admin using the secret code `SSSS0987`
 2. **Login**: Authenticate as admin
 3. **Monitor Accounts**: Use filters and sorting to view account information
 4. **Analyze Data**: View balance charts for insights
