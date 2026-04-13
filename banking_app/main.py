@@ -1,6 +1,5 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from .config import ADMIN_SEED_ADMINS
 from .database import Base, engine, SessionLocal
 from .models import user, customer as customer_model, staff as staff_model, account, transaction, service_request
@@ -10,7 +9,6 @@ from .routes import auth, customer, admin, staff
 from .utils.hash import hash_password
 
 Base.metadata.create_all(bind=engine)
-
 
 def seed_admins() -> None:
     db = SessionLocal()
