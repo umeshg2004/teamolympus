@@ -2,7 +2,6 @@
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional
-
 from ..database import get_db
 from ..config import ADMIN_SECRET_CODE
 from ..models.user import User
@@ -12,7 +11,6 @@ from ..utils.hash import hash_password, verify_password
 from ..utils.jwt import create_access_token, try_decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
 
 def create_user(db: Session, username: str, password: str, role: str) -> User:
     user = User(username=username, password_hash=hash_password(password), role=role)
