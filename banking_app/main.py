@@ -11,10 +11,14 @@ from .utils.hash import hash_password
 Base.metadata.create_all(bind=engine)
 
 def seed_admins() -> None:
+    """
+    Automatically create default admin users
+    defined inside config.py if they do not exist.
+    """
     db = SessionLocal()
     try:
-        for admin_data in ADMIN_SEED_ADMINS:
-            existing = db.query(User).filter(User.username == admin_data["username"]).first()
+        for admin in ADMIN_SEED_ADMINS:
+            existing = db.query(User).filter(User.username == admin["username"]).first()
             if existing:
                 continue
             user_obj = User(
