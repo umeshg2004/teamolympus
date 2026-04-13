@@ -128,7 +128,7 @@ if portal == "Customer":
 
     rows = []
     if token:
-        st.subheader("My Accounts")
+        st.subheader("My-Accounts")
         accounts_resp = api_get("/customer/accounts", token=token)
         if accounts_resp.ok:
             rows = accounts_resp.json()
