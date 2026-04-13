@@ -9,6 +9,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, index=True)
+    
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     balance = Column(Float, default=0.0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
