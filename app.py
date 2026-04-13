@@ -6,14 +6,13 @@ API_BASE_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Banking App", layout="wide")
 
-
 def api_post(path: str, json: dict, token: Optional[str] = None):
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     return requests.post(f"{API_BASE_URL}{path}", json=json, headers=headers, timeout=10)
 
 
 def api_get(path: str, params: Optional[dict] = None, token: Optional[str] = None):
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    headers = {"authorization": f"Bearer {token}"} if token else {}
     return requests.get(f"{API_BASE_URL}{path}", params=params, headers=headers, timeout=10)
 
 
@@ -38,7 +37,7 @@ def validate_email(value: str) -> bool:
 def safe_rerun() -> None:
     if hasattr(st, "rerun"):
         st.rerun()
-    elif hasattr(st, "experimental_rerun"):
+    elif hasattr(st, 'experimental_rerun'):
         st.experimental_rerun()
 
 
