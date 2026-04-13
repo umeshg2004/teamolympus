@@ -1,7 +1,6 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import secrets
-
 from ..config import ADMIN_SECRET_CODE
 from ..database import get_db
 from ..models.user import User
