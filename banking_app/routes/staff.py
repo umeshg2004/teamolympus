@@ -1,6 +1,5 @@
 ﻿from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
 from ..database import get_db
 from ..models.service_request import ServiceRequest
 from ..models.customer import Customer
@@ -8,7 +7,6 @@ from ..schemas.customer_schema import ServiceRequestOut, ServiceRequestUpdate
 from ..services.auth_service import require_role
 
 router = APIRouter(prefix="/staff", tags=["staff"])
-
 
 @router.get("/requests", response_model=list[ServiceRequestOut])
 def list_requests(
